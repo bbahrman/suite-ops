@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import path = require('node:path');
 import fs = require('node:fs');
+import { exec } from 'child_process';
 
 function compileWithConfig(fileToCompile: string) {
   const configPath = ts.findConfigFile('./', ts.sys.fileExists, 'tsconfig.json');
@@ -38,7 +39,44 @@ function compileWithConfig(fileToCompile: string) {
   });
 
   const exitCode = emitResult.emitSkipped ? 1 : 0;
-  process.exit(exitCode);
+  
+  if (exitCode === 0) {
+    // Get the output JavaScript file path    
+    // Extract the path structure
+    const pathParts = fileToCompile.replace(/\.ts$/, '.js').split(path.sep);
+    let suiteScriptsIndex = pathParts.findIndex(part => part === 'SuiteScripts');
+    
+    let suiteScriptsPath;
+    if (suiteScriptsIndex !== -1) {
+      // If SuiteScripts is in the path, preserve the structure from that point
+      const relativePath = pathParts.slice(suiteScriptsIndex).join('/');
+      suiteScriptsPath = `/${relativePath}`;
+    } else {
+      // If SuiteScripts is not in the path, just use the filename
+      const fileName = path.basename(fileToCompile.replace(/\.ts$/, '.js'));
+      suiteScriptsPath = `/SuiteScripts/${fileName}`;
+    }
+    const jsFilePath = `/src/FileCabinet${suiteScriptsPath}`;
+
+    
+    console.log(`Compilation successful. Uploading ${jsFilePath} to NetSuite as ${suiteScriptsPath}...`);
+    
+    // Execute the suitecloud file:upload command
+    exec(`suitecloud file:upload --paths "${suiteScriptsPath}"`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing suitecloud command: ${error.message}`);
+        process.exit(1);
+      }
+      if (stderr) {
+        console.error(`suitecloud stderr: ${stderr}`);
+      }
+      console.log(`suitecloud stdout: ${stdout}`);
+      console.log('File upload completed successfully.');
+      process.exit(0);
+    });
+  } else {
+    process.exit(exitCode);
+  }
 }
 
 // Entry point
