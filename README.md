@@ -2,6 +2,8 @@
 
 A command-line tool for compiling TypeScript files for NetSuite SuiteScript and uploading them to NetSuite.
 
+This is a work in progress, contributions and feedback are welcome.
+
 ## Installation
 
 ```bash
@@ -13,7 +15,7 @@ npm install -g suite-ops
 ### Command Line
 
 ```bash
-suite-compile path/to/your/file.ts
+suite-ops path/to/your/file.ts
 ```
 
 This will:

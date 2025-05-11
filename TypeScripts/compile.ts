@@ -8,7 +8,7 @@ import { exec, execSync } from 'child_process';
  * @param fileToCompile Path to the TypeScript file to fix
  * @returns boolean indicating success or failure
  */
-function runBiomeFix(fileToCompile: string): boolean {
+const runBiomeFix = (fileToCompile: string) => {
   try {
     console.log(`Running Biome fix on ${fileToCompile}...`);
     execSync(`npx @biomejs/biome check --write ${fileToCompile}`, { stdio: 'inherit' });
@@ -26,8 +26,8 @@ function runBiomeFix(fileToCompile: string): boolean {
  * @param fileToCompile Path to the TypeScript file to compile
  * @returns Promise that resolves when compilation and upload are complete
  */
-function compileWithConfig(fileToCompile: string): Promise<void> {
-  return new Promise((resolve, reject) => {
+const compileWithConfig = (fileToCompile: string) => {
+  return new Promise<boolean>((resolve, reject) => {
     const configPath = ts.findConfigFile('./', ts.sys.fileExists, 'tsconfig.json');
     if (!configPath) {
       const error = 'Could not find a valid tsconfig.json in the project root.';
@@ -57,6 +57,7 @@ function compileWithConfig(fileToCompile: string): Promise<void> {
     const diagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
     let hasErrors = false;
     
+    // loop through and log out any compilation errors
     diagnostics.forEach(diagnostic => {
       if (diagnostic.file && diagnostic.start !== undefined) {
         const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
@@ -74,46 +75,50 @@ function compileWithConfig(fileToCompile: string): Promise<void> {
       }
     });
 
-    const exitCode = emitResult.emitSkipped || hasErrors ? 1 : 0;
-    
-    if (exitCode === 0) {
-      // Get the output JavaScript file path    
-      // Extract the path structure
-      const pathParts = fileToCompile.replace(/\.ts$/, '.js').split(path.sep);
-      let suiteScriptsIndex = pathParts.findIndex(part => part === 'SuiteScripts');
-      
-      let suiteScriptsPath;
-      if (suiteScriptsIndex !== -1) {
-        // If SuiteScripts is in the path, preserve the structure from that point
-        const relativePath = pathParts.slice(suiteScriptsIndex).join('/');
-        suiteScriptsPath = `/${relativePath}`;
-      } else {
-        // If SuiteScripts is not in the path, just use the filename
-        const fileName = path.basename(fileToCompile.replace(/\.ts$/, '.js'));
-        suiteScriptsPath = `/SuiteScripts/${fileName}`;
-      }
-      const jsFilePath = `/src/FileCabinet${suiteScriptsPath}`;
-
-      console.log(`Compilation successful. Uploading ${jsFilePath} to NetSuite as ${suiteScriptsPath}...`);
-      
-      // Execute the suitecloud file:upload command
-      exec(`suitecloud file:upload --paths "${suiteScriptsPath}"`, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Error executing suitecloud command: ${error.message}`);
-          reject(error);
-          return;
-        }
-        if (stderr) {
-          console.error(`suitecloud stderr: ${stderr}`);
-        }
-        console.log(`suitecloud stdout: ${stdout}`);
-        console.log('File upload completed successfully.');
-        resolve();
-      });
-    } else {
+    if (emitResult.emitSkipped || hasErrors) {
       reject(new Error('Compilation failed with errors'));
+    } else {
+      resolve(true);
     }
   });
+}
+
+const uploadFileToAccount = (tsFilePath: string) => {
+  return new Promise<void>((resolve, reject) => {
+    const jsFilePath = getSuiteScriptPath(tsFilePath);
+    exec(`suitecloud file:upload --paths "${jsFilePath}"`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error executing suitecloud command: ${error.message}`);
+        reject(error);
+        return;
+      }
+      if (stderr) {
+        console.error(`suitecloud stderr: ${stderr}`);
+      }
+      console.log(`suitecloud stdout: ${stdout}`);
+      console.log('File upload completed successfully.');
+      resolve();
+    });
+  });
+}
+
+const getSuiteScriptPath = (filePath: string) => {
+  const pathParts = filePath.replace(/\.ts$/, '.js').split(path.sep);
+  let suiteScriptsIndex = pathParts.findIndex(part => part === 'SuiteScripts');
+  
+  let suiteScriptsPath;
+  if (suiteScriptsIndex !== -1) {
+    // If SuiteScripts is in the path, preserve the structure from that point
+    const relativePath = pathParts.slice(suiteScriptsIndex).join('/');
+    suiteScriptsPath = `/${relativePath}`;
+  } else {
+    // If SuiteScripts is not in the path, just use the filename
+    const fileName = path.basename(filePath.replace(/\.ts$/, '.js'));
+    suiteScriptsPath = `/SuiteScripts/${fileName}`;
+  }
+  const jsFilePath = `/src/FileCabinet${suiteScriptsPath}`;
+
+  console.log(`Compilation successful. Uploading ${jsFilePath} to NetSuite as ${suiteScriptsPath}...`);
 }
 
 /**
@@ -121,7 +126,7 @@ function compileWithConfig(fileToCompile: string): Promise<void> {
  * @param filePath Path to the file to validate
  * @throws Error if the file doesn't exist
  */
-function validateInputFile(filePath: string): string {
+const validateInputFile = (filePath: string) => {
   const resolvedPath = path.resolve(filePath);
   if (!fs.existsSync(resolvedPath)) {
     throw new Error(`The file "${resolvedPath}" does not exist.`);
@@ -134,14 +139,17 @@ function validateInputFile(filePath: string): string {
  * @param filePath Path to the TypeScript file to compile
  * @returns Promise that resolves when compilation and upload are complete
  */
-export async function compile(filePath: string): Promise<void> {
+export const compile = async (filePath: string) => {
   try {
     const inputFile = validateInputFile(filePath);
     
     // Run Biome fix first, then compile
     const biomeSuccess = runBiomeFix(inputFile);
     if (biomeSuccess) {
-      await compileWithConfig(inputFile);
+      const compileResult = await compileWithConfig(inputFile);
+      if (compileResult) {
+        await uploadFileToAccount(inputFile);
+      }
     } else {
       throw new Error('Biome fix failed. Compilation aborted.');
     }

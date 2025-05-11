@@ -3,13 +3,13 @@
     "target": "ES2020",                  // Good support for async/await and modern JS
     "module": "CommonJS",                // Node.js uses CommonJS (unless using ESM setup)
     "outDir": "dist",                    // Compiled JS will go in this directory
-    "rootDir": ".",                      // Base folder for TS source files
+    "rootDir": "TypeScripts",            // Base folder for TS source files
     "moduleResolution": "node",          // Node-style module resolution
     "esModuleInterop": true,             // Allows `import x from 'y'` for CommonJS modules
     "forceConsistentCasingInFileNames": true,
     "strict": true,                      // Recommended strictness
     "skipLibCheck": true                 // Avoids checking types in `node_modules`
   },
-  "include": ["TypeScripts/"],             // Include only the script if desired
+  "include": ["TypeScripts/**/*"],           // Include all files in TypeScripts
   "exclude": ["node_modules"]
 }
