@@ -1,18 +1,21 @@
 {
-  "name": "compile-tool",
+  "name": "suite-ops",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "compile": "ts-node TypeScripts/compile.ts"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ben Bahrman",
   "license": "ISC",
-  "description": "",
+  "description": "Compile SuiteScript files and upload to NetSuite",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "child_process": "^1.0.2",
+    "fs": "^1.0.2",
+    "path": "^1.0.2",
+    "@oracle/suitecloud-cli": "^1.0.2"
   }
 }
