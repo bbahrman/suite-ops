@@ -1,7 +1,19 @@
 import * as ts from 'typescript';
 import path = require('node:path');
 import fs = require('node:fs');
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
+
+function runBiomeFix(fileToCompile: string): boolean {
+  try {
+    console.log(`Running Biome fix on ${fileToCompile}...`);
+    execSync(`npx @biomejs/biome check --write ${fileToCompile}`, { stdio: 'inherit' });
+    console.log('Biome fix completed successfully.');
+    return true;
+  } catch (error) {
+    console.error(`Error running Biome fix: ${error}`);
+    return false;
+  }
+}
 
 function compileWithConfig(fileToCompile: string) {
   const configPath = ts.findConfigFile('./', ts.sys.fileExists, 'tsconfig.json');
@@ -92,4 +104,11 @@ if (!fs.existsSync(inputFile)) {
   process.exit(1);
 }
 
-compileWithConfig(inputFile);
+// Run Biome fix first, then compile
+const biomeSuccess = runBiomeFix(inputFile);
+if (biomeSuccess) {
+  compileWithConfig(inputFile);
+} else {
+  console.error('Biome fix failed. Compilation aborted.');
+  process.exit(1);
+}
