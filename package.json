@@ -1,21 +1,45 @@
 {
   "name": "suite-ops",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "suite-compile": "./dist/cli.js"
   },
-  "keywords": [],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "netsuite",
+    "suitescript",
+    "typescript",
+    "compiler"
+  ],
   "author": "Ben Bahrman",
   "license": "ISC",
   "description": "Compile SuiteScript files and upload to NetSuite",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "@types/node": "^20.10.0"
   },
   "dependencies": {
-    "child_process": "^1.0.2",
-    "fs": "^1.0.2",
-    "path": "^1.0.2",
     "@oracle/suitecloud-cli": "^1.0.2"
-  }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/benbahrman/suite-ops.git"
+  },
+  "bugs": {
+    "url": "https://github.com/benbahrman/suite-ops/issues"
+  },
+  "homepage": "https://github.com/benbahrman/suite-ops#readme"
 }
